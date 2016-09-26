@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="author" content="Rajasekhara Duvvuru Muni, Dmitry Grapov, Jeevan HS, Ravindra Pushker, Rupa V Nair" />
+
+<meta name="date" content="2016-03-26" />
+
+<title>Predictive Analytics Challenge</title>
+
+<script src="pac_document_files/jquery-1.11.0/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="pac_document_files/bootstrap-3.3.1/css/bootstrap.min.css" rel="stylesheet" />
+<script src="pac_document_files/bootstrap-3.3.1/js/bootstrap.min.js"></script>
+<script src="pac_document_files/bootstrap-3.3.1/shim/html5shiv.min.js"></script>
+<script src="pac_document_files/bootstrap-3.3.1/shim/respond.min.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<link rel="stylesheet"
+      href="pac_document_files/highlight/default.css"
+      type="text/css" />
+<script src="pac_document_files/highlight/highlight.js"></script>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs && document.readyState && document.readyState === "complete") {
+   window.setTimeout(function() {
+      hljs.initHighlighting();
+   }, 0);
+}
+</script>
+
+
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img { 
+  max-width:100%; 
+  height: auto; 
+}
+</style>
+<div class="container-fluid main-container">
+
+
+<div id="header">
+<h1 class="title">Predictive Analytics Challenge</h1>
+<h4 class="author"><em>Rajasekhara Duvvuru Muni, Dmitry Grapov, Jeevan HS, Ravindra Pushker, Rupa V Nair</em></h4>
+<h4 class="date"><em>March 26, 2016</em></h4>
+</div>
+
+
+<div id="introduction" class="section level2">
+<h2>Introduction</h2>
+<p>Insect damage in Corn (Zea mays L.) accounts for major yield loss in Brazil and across Latin America. Corn hybrids, with Bacillus thuringiensis (Bt) toxins provide significant protection against insect damage. However, additional factors such as weather also contribute to damage caused by insects. The objective of this study was to predict occurrence of insect damage to corn plants given genotype, plant growth stage, location and weather data.<br />Accurate prediction of insect damage is expected to enable timely recommendations for precautionary integrated pest management control measures leading to reduced crop damage and losses.</p>
+<hr />
+</div>
+<div id="objectives" class="section level2">
+<h2>Objectives</h2>
+<ul>
+<li>Develop a predictive model for insect damage incidence given crop, weather and soil information.</li>
+<li>Predict insect damage for the provided test data.</li>
+</ul>
+<hr />
+</div>
+<div id="data-sources" class="section level2">
+<h2>Data sources</h2>
+<ol style="list-style-type: decimal">
+<li><p>Training data <code>data/OBVS.CSV</code> consisting of <code>7427</code> insect incidence observations in corn across Brazil (original source: <a href="http://velocity.monsanto.com/analytics-challenge/dataset/dataset.zip">Velocity</a>)</p></li>
+<li><p>Daily weather data <code>data/weather_data.txt</code> across Brazil locations for three years, 2013, 2014 and 2015 (original source: <a href="http://velocity.monsanto.com/analytics-challenge/dataset/dataset.zip">Velocity</a>)</p></li>
+<li><p>Soil type information for Brazil locations derived from the <a href="http://www.esalq.usp.br/gerd/">soilDB</a> and integrated based on the geographical proximity to the observed fields.</p></li>
+<li><p>Test data for 2015 and 2016 used to predict incidence of insect damage given the developed model <code>data/OBVS_EVAL.CSV</code> and <code>data/weather_eval.csv</code> (original source: <a href="http://velocity.monsanto.com/analytics-challenge/dataset/dataset.zip">Velocity</a>).</p></li>
+</ol>
+<hr />
+</div>
+<div id="data-integration-and-pre-processing" class="section level2">
+<h2>Data integration and pre-processing</h2>
+<ul>
+<li><p>Majority of the observations in the training data (<code>99%</code>) were for the insect <code>Spodoptera frugiperda</code>. Therefore predictive modeling was limited to <code>Spodoptera frugiperda</code>.</p></li>
+<li><p>General cleanup was done by removing spaces in the categorical data and formatting dates.</p></li>
+<li><p>Geographical coordinates (<code>Lat</code> and <code>Long</code>) in both observation and weather data were rounded to <code>5</code> decimal places.</p></li>
+<li><p>Weather data for <code>30 days</code> prior to the observed insect damage for each referenced fields was added based on information for coordinates within a <code>25km radius</code> for the location.</p></li>
+<li><p>Soil type from soilDB was integrated based on geographical proximity to observed field coordinates based on a<code>25km radius</code>.</p></li>
+<li><p>The test data contained additional plant growth stages (<code>STAGE</code>) not present in the training data: <code>VN, V1, R7</code> and <code>VE</code>. These stages were replaced with their closet counterparts present in the training data. The plant stage <code>VE</code> was further imputed based on observed plant stages for similar <code>TECHNOLOGY_CODED</code> and <code>DATE</code> within a <code>25km radius</code>.</p></li>
+</ul>
+<hr />
+</div>
+<div id="feature-generation" class="section level2">
+<h2>Feature Generation</h2>
+<ol style="list-style-type: decimal">
+<li><p><code>Planting dates</code> were estimation based on the <code>DATE</code> of observation (observed insect damage) and crop <code>STAGE</code>.</p></li>
+<li><p>Summarized weather features including: <code>sum, min, max, mean and median</code> were generated for <code>1, 2, 3</code> and <code>4</code> weeks prior to the <code>DATE</code> of the observation.</p></li>
+<li><p>Discrete weather patterns or <code>barcodes</code> (H,M,L) were calculated for <code>1, 2, 3</code> and <code>4</code> weeks prior to the observed date of insect damage based on comparison of quantiles (variables labeled <code>Q1 to Q4</code>) for each weather parameter.</p></li>
+<li><p>Area under the curve (<code>AUC</code>) for all weather parameters for <code>1 to 30 days</code> prior to the observed insect damage was calculated.</p></li>
+<li><p>Missing test data weather information was imputed based on the median for present data within <code>25 km</code> matching the <code>DATE</code> of the observation.</p></li>
+</ol>
+<hr />
+</div>
+<div id="detailed-description-of-the-predictive-modeling-workflow" class="section level2">
+<h2>Detailed description of the predictive modeling workflow</h2>
+<p>The complete workflow code is described in <code>Data_analysis_main.R</code>.</p>
+<p>All data analysis functions can be found in <code>scripts/</code>.</p>
+<pre><code>##  [1] &quot;01_DataIntegration.R&quot;       &quot;02_aggregateForWeek.R&quot;     
+##  [3] &quot;03_weatherDataAggregate.R&quot;  &quot;04_calculateAUC.R&quot;         
+##  [5] &quot;05_imputeData.R&quot;            &quot;06_fullRankModel.R&quot;        
+##  [7] &quot;07_evaluateFullRankModel.R&quot; &quot;08_featureSelection.R&quot;     
+##  [9] &quot;09_predictTestData.R&quot;       &quot;10_imputeSTAGE.R&quot;          
+## [11] &quot;featureSelection.sh&quot;        &quot;fullRankModel.sh&quot;</code></pre>
+<hr />
+</div>
+<div id="overview-of-the-predictive-modeling-workflow" class="section level2">
+<h2>Overview of the predictive modeling workflow</h2>
+<p>Predictive models for insect damage were developed using the <code>Random Forest</code> ensemble modeling algorithm. This approach was selected over others (e.g. SVM, PLS and ANN) due to the robust in-model cross-validation which limits overfitting, ease of tuning and parallelization.</p>
+<p>Modeling was conducted using the following workflow:</p>
+<ol style="list-style-type: decimal">
+<li><p>Optimization of the <code>full rank</code> (all features) model <code>mtry</code> using repeated cross-validation <code>7 fold repeated 3 times</code> with an <code>mtry</code> tune length of <code>10</code> (<code>caret library</code>) based on the area under the receiver operator characteristic curve (ROC) for predictions.</p></li>
+<li><p>Model validation using a held out <code>33%</code> of the training data as a pseudo-test set.</p></li>
+<li><p>Selection of optimal predictive features using <code>recursive feature elimination</code> to generate a <code>feature selected</code> model.</p></li>
+<li><p>Comparison of the <code>full rank</code> to <code>feature selected</code> model’s performance.</p></li>
+<li><p>Prediction of the test data insect damage based on the <code>feature selected</code> model.</p></li>
+</ol>
+<hr />
+</div>
+<div id="results" class="section level2">
+<h2>Results</h2>
+<div id="full-rank-model-tunning" class="section level3">
+<h3>Full rank model tunning</h3>
+<p><img src="pac_document_files/figure-html/unnamed-chunk-2-1.png" /> The optimal <code>mtry</code> was determined determined at 191</p>
+</div>
+<div id="optimal-predictive-feature-selection-using-the-recursive-feature-elimination-algorithm" class="section level3">
+<h3>Optimal predictive feature selection using the recursive feature elimination algorithm</h3>
+<p>Model cross-validation for each feature subset was conducted using <code>3 fold</code> repeated cross-validation repeated <code>3 times</code>.</p>
+</div>
+<div id="determination-of-the-optimal-number-of-predictive-features" class="section level3">
+<h3>Determination of the optimal number of predictive features</h3>
+<p><img src="pac_document_files/figure-html/unnamed-chunk-3-1.png" /></p>
+<p>Optimal features were selected based on maximization of the cross-validated <code>Kappa</code> statistic.</p>
+</div>
+<div id="selected-features-contribution-to-model-predictive-performance-vip" class="section level3">
+<h3>Selected features contribution to model predictive performance (<code>VIP</code>)</h3>
+<p><img src="pac_document_files/figure-html/unnamed-chunk-4-1.png" /></p>
+<pre><code>##  [1] &quot;TECHNOLOGY_CODED&quot; &quot;STAGE&quot;            &quot;LON&quot;             
+##  [4] &quot;WINDSPEEDDate.13&quot; &quot;PRECIPDate.21&quot;    &quot;MAXRHDate.14&quot;    
+##  [7] &quot;LAT&quot;              &quot;MINRH.Week2.Q3&quot;   &quot;MAXRHDate.27&quot;    
+## [10] &quot;MINRHDate.1&quot;</code></pre>
+</div>
+<div id="comparison-of-full_rank-and-selected_model-predictive-performance-for-trainning-and-test-data" class="section level3">
+<h3>Comparison of <code>full_rank</code> and <code>selected_model</code> predictive performance for trainning and test data</h3>
+<table>
+<thead>
+<tr class="header">
+<th align="left">model</th>
+<th align="left">tr.time</th>
+<th align="left">pred.time</th>
+<th align="left">total.time</th>
+<th align="left">tune</th>
+<th align="right">train.ROC</th>
+<th align="right">train.Sens</th>
+<th align="right">train.Spec</th>
+<th align="right">test.Accuracy</th>
+<th align="right">test.Kappa</th>
+<th align="right">test.Sensitivity</th>
+<th align="right">test.Specificity</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">full_rank_model</td>
+<td align="left">35.8 mins</td>
+<td align="left">0.315 secs</td>
+<td align="left">2150 secs</td>
+<td align="left">mtry=191</td>
+<td align="right">0.890</td>
+<td align="right">0.908</td>
+<td align="right">0.676</td>
+<td align="right">0.843</td>
+<td align="right">0.598</td>
+<td align="right">0.651</td>
+<td align="right">0.920</td>
+</tr>
+<tr class="even">
+<td align="left">selected_model</td>
+<td align="left">1.27 mins</td>
+<td align="left">0.0734 secs</td>
+<td align="left">76.5 secs</td>
+<td align="left">mtry=8</td>
+<td align="right">0.897</td>
+<td align="right">0.910</td>
+<td align="right">0.679</td>
+<td align="right">0.843</td>
+<td align="right">0.598</td>
+<td align="right">0.646</td>
+<td align="right">0.923</td>
+</tr>
+</tbody>
+</table>
+<p>Comparison of the <code>full_rank</code> and <code>selected_model</code> predictive performance (above, where) suggests that the reduced feature model (1.5%) has nearly equivalent predictive performance to the full rank model. Based on this observation the <code>selected_model</code> was used to predict insect incidence for the test data.</p>
+<hr />
+</div>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>Our analysis revealed that, random forest based ensemble methods coupled with recursive feature elimination could predict insect damage occurrence with high accuracy (see above). The major predictors contributing to this model were technology coded followed by, location, stage and weather parameters. When technology coded is H, there is high degree of probability of damage occurrence. Similarly of all the developmental stages, R6 seems to be the most susceptible to insect damage. When it comes to the weather parameters, maximum relative humidity 14 days prior to the date of observation and windspeed on day 13 (prior to observation) are suggested to be good predictors for incidence of insect damage (14 and 13 days after respectively). Domain knowledge review of <code>Spodoptera frugiperda</code> information supports the observation that higher relative humidity in the field could enable an increase in the natural predator population of <code>Spodoptera frugiperda</code> and consequently reduce egg hatching and later incidence of insect damage. In conclusion our model could be used to design and recommend alternative integrated pest control measures in addition to existing technology recommendations.</p>
+<hr />
+</div>
+<div id="pac-team" class="section level1">
+<h1>PAC Team</h1>
+<h3>
+<p><b></p>
+<ul>
+<li><p><a href="http://mysites.monsanto.com/Person.aspx?accountname=ASIA%2DPACIFIC%5CRDUVV">Rajasekhara Duvvuru Muni</a></p></li>
+<li><p><a href="http://mysites.monsanto.com/Person.aspx?accountname=NORTH%5FAMERICA%5CDDGRAP">Dmitry Grapov</a></p></li>
+<li><p><a href="http://mysites.monsanto.com/Person.aspx?accountname=ASIA%2DPACIFIC%5CJHS">Jeevan HS</a></p></li>
+<li><p><a href="http://mysites.monsanto.com/Person.aspx?accountname=ASIA%2DPACIFIC%5CRPUSH1">Ravindra Pushker</a></p></li>
+<li><a href="http://mysites.monsanto.com/Person.aspx?accountname=ASIA%2DPACIFIC%5CRNAIR1">Rupa V Nair</a></li>
+</ul>
+</h3>
+<p></b></p>
+<div id="citations-see-libraries-used-in-the-code" class="section level2">
+<h2>Citations (see <code>libraries</code> used in the code)</h2>
+</div>
+<div id="about" class="section level2">
+<h2>About</h2>
+<pre><code>## R version 3.1.2 (2014-10-31)
+## Platform: x86_64-unknown-linux-gnu (64-bit)
+## 
+## locale:
+##  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+##  [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+##  [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+##  [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+##  [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+## [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+## 
+## attached base packages:
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## 
+## other attached packages:
+## [1] dplyr_0.4.3         knitr_1.11          randomForest_4.6-10
+## [4] caret_6.0-52        ggplot2_2.0.0       lattice_0.20-29    
+## 
+## loaded via a namespace (and not attached):
+##  [1] assertthat_0.1      BradleyTerry2_1.0-6 brglm_0.5-9        
+##  [4] car_2.0-25          codetools_0.2-10    colorspace_1.2-6   
+##  [7] DBI_0.3.1           digest_0.6.8        evaluate_0.8       
+## [10] foreach_1.4.2       formatR_1.2         grid_3.1.2         
+## [13] gtable_0.1.2        gtools_3.4.1        highr_0.5          
+## [16] htmltools_0.3       iterators_1.0.7     lazyeval_0.1.10    
+## [19] lme4_1.1-7          magrittr_1.5        MASS_7.3-44        
+## [22] Matrix_1.1-5        mgcv_1.8-7          minqa_1.2.4        
+## [25] munsell_0.4.2       nlme_3.1-119        nloptr_1.0.4       
+## [28] nnet_7.3-11         parallel_3.1.2      pbkrtest_0.4-2     
+## [31] plyr_1.8.3          quantreg_5.11       R6_2.1.0           
+## [34] Rcpp_0.12.3         reshape2_1.4.1      rmarkdown_0.7      
+## [37] scales_0.3.0        SparseM_1.6         splines_3.1.2      
+## [40] stats4_3.1.2        stringi_0.4-1       stringr_1.0.0      
+## [43] tools_3.1.2         yaml_2.1.13</code></pre>
+</div>
+</div>
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+$(document).ready(function () {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+});
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
